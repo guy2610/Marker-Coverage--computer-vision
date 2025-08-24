@@ -1,0 +1,10 @@
+^C:\USERS\GUYEV\DOCUMENTS\SODYO ASSIGMENT\SODYO ASSIGMENT\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/guyev/Documents/Sodyo assigment/Sodyo assigment" "-BC:/Users/guyev/Documents/Sodyo assigment/Sodyo assigment/build" --check-stamp-file "C:/Users/guyev/Documents/Sodyo assigment/Sodyo assigment/build/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\guyev\Documents\Sodyo assigment\Sodyo assigment\Sodyo assigment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\guyev\Documents\Sodyo assigment\Sodyo assigment\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{C07D9C52-57D7-36B8-9173-21F44FFAB785}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+﻿  Sodyo assigment.cpp
+C:\Users\guyev\Documents\Sodyo assigment\Sodyo assigment\Sodyo assigment.cpp(415,33): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+  Generating code
+  1 of 1254 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  Sodyo assigment.vcxproj -> C:\Users\guyev\Documents\Sodyo assigment\x64\Release\Sodyo assigment.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.
