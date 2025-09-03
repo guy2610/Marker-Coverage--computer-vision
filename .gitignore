@@ -1,0 +1,23 @@
+# Build / binaries
+build/
+x64/
+*.exe
+*.dll
+*.lib
+*.pdb
+*.obj
+*.iobj
+*.ipdb
+*.tlog
+*.log
+*.recipe
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
