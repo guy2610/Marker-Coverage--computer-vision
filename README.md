@@ -1,125 +1,167 @@
 # Marker Coverage Estimator
 
 ## Overview
-This project implements a **Marker Coverage Estimator** based on computer vision using OpenCV.  
-The task is to detect a **3×3 grid of colored patches** (red, green, blue, yellow, cyan, magenta) inside an image, validate its geometry, and compute its **coverage ratio**.  
-The algorithm is designed to be robust against **rotation (up to 45°), scale, and perspective distortions**, while rejecting invalid detections.  
-Final output:  
-- `marker_found <filename>` if the marker passes all validation steps.  
-- `marker_not_found <filename> <FR_X>` with a failure reason otherwise.
+This project implements a **Marker Coverage Estimator** using OpenCV.  
+It detects a **3×3 grid of colored patches** (red, green, blue, yellow, cyan, magenta), validates geometry, and computes a **coverage ratio**.  
+The algorithm is robust to **rotation (≤45°)**, scale, and perspective distortions.
 
+Final output:
+- `marker_found <filename>` if the marker passes validation.  
+- `marker_not_found <filename> <FR_X>` with a failure reason otherwise. 
 ---
 
-## Algorithm (High-Level, ~150 words)
-The algorithm starts by resizing the input image to a maximum of 640×480 for performance.  
-It converts the image to HSV color space and applies thresholding to segment the six expected colors.  
-Contours are extracted from each color mask, filtered by area, and their bounding boxes are used to define patch candidates.  
+## Algorithm (High-Level)
+1. Convert image to HSV and threshold by the six expected colors.  
+2. Extract contours, filter by relative area, keep bounding boxes.  
+3. Rotate patch centers with **PCA** to normalize tilt/rotation.  
+4. Cluster with **k-means** into 3 rows × 3 columns.  
+5. Greedy assignment to fill all 9 grid cells.  
+6. Validate spacing by checking uniformity of normalized gaps:  
+   - Accept if `cvx ≤ 0.55` and `cvy ≤ 0.65`.  
+   - Allow fallback if slightly higher but coverage is strong.  
+7. Compute convex hull of the 9 patches and measure coverage ratio (`hull_area / image_area`).  
+8. Accept marker if ratio ≥ 70% and spacing passes thresholds, or via fallback rules.
 
-To build the 3×3 grid, patch centers are rotated using **PCA** to align with the dominant orientation, then clustered into rows and columns using **k-means**.  
-A greedy assignment matches the best candidates to the 9 grid cells.  
-Validation checks ensure that patch spacing is uniform (low variance in normalized gaps).  
-
-Finally, the convex hull of the 9 patches is computed, and its area compared to the bounding box area to produce a **coverage ratio**.  
-If the ratio exceeds the threshold (≥70%), and spacing constraints are satisfied, the marker is accepted.  
-
+(Full description in [ALGORITHM.md](ALGORITHM.md))  
 ---
 
-## Functional Requirements Coverage
-- **FR-1**: Input validation and color segmentation.  
-- **FR-2**: Grid construction (PCA + clustering + greedy assignment).  
-- **FR-3**: Robustness to scale/rotation/tilt (tested up to ~45°).  
-- **FR-4**: Runtime <200ms on 640×480 images (typical 40–70ms).  
-- **FR-5**: Coverage ratio computed using convex hull vs bounding box.  
-- **FR-6**: Final decision: marker found/not found.  
-- **FR-7**: Unit tests (basic assertions provided separately).  
-- **FR-8**: Documentation (this README + algorithm description).  
+## Project Structure
 
+├── CMakeLists.txt
+├── README.md
+├── ALGORITHM.md
+├── src/
+│ ├── main.cpp
+│ ├── color_segmentation.cpp
+│ ├── grid_detector.cpp
+│ ├── coverage.cpp
+├── include/
+│ ├── types.hpp
+│ ├── color_segmentation.hpp
+│ ├── grid_detector.hpp
+│ ├── coverage.hpp
+├── data/ # Example input images
+└── build/ # Build output (ignored in git)
+ 
 ---
 
 ## Build Instructions
 
 ### Prerequisites
 - CMake ≥ 3.15  
-- OpenCV ≥ 4.5 (installed via [vcpkg](https://github.com/microsoft/vcpkg) or system package)  
-- Compiler: MSVC (Windows) / g++ or clang++ (Linux, MacOS)
+- OpenCV ≥ 4.5 (via [vcpkg](https://github.com/microsoft/vcpkg) or system package)  
+- Compiler: MSVC (Windows) / g++ or clang++ (Linux/MacOS)  
 
-### Windows (MSVC + vcpkg)
-```bash
-cd "C:\Users\<User>\Documents\Sodyo assigment\Sodyo assigment"
+### Windows
+powershell
 cmake -S . -B build -G "Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 
+### Linux/MacOS
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 
-#####results######
+###Usage
+./MarkerCoverageEstimator [--debug] ./data/hi1.png ./data/hi2.png ...
+
+###Functional Requirements Coverage
+FR-1: Input validation & segmentation
+FR-2: Grid construction (PCA + clustering + assignment)
+FR-3: Robustness to rotation/scale/tilt (≤45°)
+FR-4: Runtime <200ms @ 640×480 (typical: 40–70ms)
+FR-5: Coverage ratio via convex hull / bounding box
+FR-6: Decision: marker found / not found
+FR-7: Documentation: README + algorithm description
+
+#####Example######
 The first run is with debug mode, and the second is without
 
-C:\Users\guyev\Documents\Sodyo assigment\Sodyo assigment\build\Release>SodyoAssignment.exe "--debug" "C:\Users\guyev\Documents\Sodyo assigment\data\hi1.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi2.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi3.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi4.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi5.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi6.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi7.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi8.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi9.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi10.png"
-[kmeans] rows counts (pre-pick): 4 5 3
-C:\Users\guyev\Documents\Sodyo assigment\data\hi1.png grid_detected
-[coverage] hull=1660 bbox=2310 ratio=0.718615 (72%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi1.png 72%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi1.png took 507 ms
-[kmeans] rows counts (pre-pick): 5 3 2
-C:\Users\guyev\Documents\Sodyo assigment\data\hi2.png grid_detected
-[coverage] hull=8578 bbox=9660 ratio=0.887992 (89%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi2.png 89%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi2.png took 46 ms
-[kmeans] rows counts (pre-pick): 8 4 6
-C:\Users\guyev\Documents\Sodyo assigment\data\hi3.png grid_detected
-[coverage] hull=3414.5 bbox=4118 ratio=0.829165 (83%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi3.png 83%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi3.png took 46 ms
-[kmeans] rows counts (pre-pick): 3 7 7
-C:\Users\guyev\Documents\Sodyo assigment\data\hi4.png grid_detected
-[coverage] hull=5171.5 bbox=5865 ratio=0.881756 (88%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi4.png 88%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi4.png took 48 ms
-[kmeans] rows counts (pre-pick): 4 4 6
-C:\Users\guyev\Documents\Sodyo assigment\data\hi5.png grid_detected
-[coverage] hull=5173.5 bbox=6248 ratio=0.828025 (83%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi5.png 83%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi5.png took 45 ms
-[kmeans] rows counts (pre-pick): 7 4 1
-C:\Users\guyev\Documents\Sodyo assigment\data\hi6.png grid_detected
-[grid] spacing CV initial failed: cvx=0.407866 cvy=0.771897
-[coverage] hull=1433.5 bbox=1856 ratio=0.77236 (77%)
-[final] cvx=0.407866 cvy=0.771897 coverage_ratio=0.77236
-marker_not_found C:\Users\guyev\Documents\Sodyo assigment\data\hi6.png FR_3
-C:\Users\guyev\Documents\Sodyo assigment\data\hi6.png took 48 ms
-[kmeans] rows counts (pre-pick): 7 8 2
-C:\Users\guyev\Documents\Sodyo assigment\data\hi7.png grid_detected
-[coverage] hull=4497.5 bbox=4950 ratio=0.908586 (91%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi7.png 91%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi7.png took 45 ms
-[kmeans] rows counts (pre-pick): 3 3 3
-C:\Users\guyev\Documents\Sodyo assigment\data\hi8.png grid_detected
-[coverage] hull=1265.5 bbox=1575 ratio=0.803492 (80%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi8.png 80%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi8.png took 48 ms
-[kmeans] rows counts (pre-pick): 3 6 8
-C:\Users\guyev\Documents\Sodyo assigment\data\hi9.png grid_detected
-[coverage] hull=16017 bbox=18348 ratio=0.872956 (87%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi9.png 87%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi9.png took 46 ms
-[kmeans] rows counts (pre-pick): 6 4 1
-C:\Users\guyev\Documents\Sodyo assigment\data\hi10.png grid_detected
-[coverage] hull=2326.5 bbox=2640 ratio=0.88125 (88%)
-C:\Users\guyev\Documents\Sodyo assigment\data\hi10.png 88%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi10.png took 48 ms
+C:\....\Release>SodyoAssignment.exe "C:\....\data\hi1.png" "C:\....\data\hi2.png" "C:\....\data\hi3.png" "C:\....\data\hi4.png" "C:\....\data\hi5.png" "C:\....\data\hi6.png" "C:\....\data\hi7.png" "C:\....\data\hi8.png" "C:\....\data\hi9.png" "C:\....\data\hi10.png" "C:\....\data\hi11.png" "C:\....\data\hi12.png" "C:\....\data\hi13.png" "C:\....\data\hi14.png" "C:\....\data\hi15.png" "C:\....\data\hi16.png" "C:\....\data\hi17.png" "C:\....\data\hi18.png" "C:\....\data\hi19.png" "C:\....\data\hi20.png"
+C:\....\data\hi1.png 53%
+C:\....\data\hi2.png 64%
+C:\....\data\hi3.png 66%
+C:\....\data\hi4.png 69%
+C:\....\data\hi5.png 64%
+C:\....\data\hi6.png 0%
+C:\....\data\hi7.png 77%
+C:\....\data\hi8.png 0%
+C:\....\data\hi9.png 77%
+C:\....\data\hi10.png 75%
+C:\....\data\hi11.png 55%
+C:\....\data\hi12.png 66%
+C:\....\data\hi13.png 57%
+C:\....\data\hi14.png 53%
+C:\....\data\hi15.png 71%
+C:\....\data\hi16.png 57%
+C:\....\data\hi17.png 64%
+C:\....\data\hi18.png 77%
+C:\....\data\hi19.png 70%
+C:\....\data\hi20.png 77%
 
-Summary: passed=9 failed=1 out of 10
-Press any key to close debug windows...
+Summary: passed=18 failed=2 out of 20
 
-C:\Users\guyev\Documents\Sodyo assigment\Sodyo assigment\build\Release>SodyoAssignment.exe "C:\Users\guyev\Documents\Sodyo assigment\data\hi1.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi2.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi3.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi4.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi5.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi6.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi7.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi8.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi9.png" "C:\Users\guyev\Documents\Sodyo assigment\data\hi10.png"
-C:\Users\guyev\Documents\Sodyo assigment\data\hi1.png 72%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi2.png 89%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi3.png 83%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi4.png 88%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi5.png 83%
-marker_not_found C:\Users\guyev\Documents\Sodyo assigment\data\hi6.png FR_3
-C:\Users\guyev\Documents\Sodyo assigment\data\hi7.png 91%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi8.png 80%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi9.png 87%
-C:\Users\guyev\Documents\Sodyo assigment\data\hi10.png 88%
+C:\....\Release>SodyoAssignment.exe "--debug" "C:\....\data\hi1.png" "C:\....\data\hi2.png" "C:\....\data\hi3.png" "C:\....\data\hi4.png" "C:\....\data\hi5.png" "C:\....\data\hi6.png" "C:\....\data\hi7.png" "C:\....\data\hi8.png" "C:\....\data\hi9.png" "C:\....\data\hi10.png" "C:\....\data\hi11.png" "C:\....\data\hi12.png" "C:\....\data\hi13.png" "C:\....\data\hi14.png" "C:\....\data\hi15.png" "C:\....\data\hi16.png" "C:\....\data\hi17.png" "C:\....\data\hi18.png" "C:\....\data\hi19.png" "C:\....\data\hi20.png"
+marker_found C:\....\data\hi1.png
+[coverage] hull=1660 image=3120 ratio=0.532051 (53%)
+C:\....\data\hi1.png took 8 ms
+marker_found C:\....\data\hi2.png
+[coverage] hull=8578 image=13500 ratio=0.635407 (64%)
+C:\....\data\hi2.png took 3 ms
+marker_found C:\....\data\hi3.png
+[coverage] hull=3414.5 image=5168 ratio=0.6607 (66%)
+C:\....\data\hi3.png took 2 ms
+marker_found C:\....\data\hi4.png
+[coverage] hull=5171.5 image=7475 ratio=0.691839 (69%)
+C:\....\data\hi4.png took 2 ms
+marker_found C:\....\data\hi5.png
+[coverage] hull=5173.5 image=8085 ratio=0.639889 (64%)
+C:\....\data\hi5.png took 2 ms
+marker_not_found C:\....\data\hi6.png LOW_COVERAGE
+[final] cvx=0.407866 cvy=0.771897 coverage_ratio=0.407244
+C:\....\data\hi6.png took 2 ms
+marker_found C:\....\data\hi7.png
+[coverage] hull=4497.5 image=5850 ratio=0.768803 (77%)
+C:\....\data\hi7.png took 2 ms
+marker_not_found C:\....\data\hi8.png LOW_COVERAGE
+[final] cvx=0.117667 cvy=0.208022 coverage_ratio=0.385823
+C:\....\data\hi8.png took 1 ms
+marker_found C:\....\data\hi9.png
+[coverage] hull=16017 image=20850 ratio=0.768201 (77%)
+C:\....\data\hi9.png took 2 ms
+marker_found C:\....\data\hi10.png
+[coverage] hull=2326.5 image=3102 ratio=0.75 (75%)
+C:\....\data\hi10.png took 2 ms
+marker_found C:\....\data\hi11.png
+[coverage] hull=6687.5 image=12096 ratio=0.552869 (55%)
+C:\....\data\hi11.png took 2 ms
+marker_found C:\....\data\hi12.png
+[coverage] hull=3414.5 image=5168 ratio=0.6607 (66%)
+C:\....\data\hi12.png took 1 ms
+marker_found C:\....\data\hi13.png
+[coverage] hull=2028.5 image=3577 ratio=0.567095 (57%)
+C:\....\data\hi13.png took 1 ms
+marker_found C:\....\data\hi14.png
+[coverage] hull=5220 image=9785 ratio=0.53347 (53%)
+C:\....\data\hi14.png took 2 ms
+marker_found C:\....\data\hi15.png
+[coverage] hull=7106 image=9951 ratio=0.714099 (71%)
+C:\....\data\hi15.png took 1 ms
+marker_found C:\....\data\hi16.png
+[coverage] hull=1957.5 image=3430 ratio=0.5707 (57%)
+C:\....\data\hi16.png took 1 ms
+marker_found C:\....\data\hi17.png
+[coverage] hull=8055 image=12502 ratio=0.644297 (64%)
+C:\....\data\hi17.png took 1 ms
+marker_found C:\....\data\hi18.png
+[coverage] hull=8108.5 image=10580 ratio=0.766399 (77%)
+C:\....\data\hi18.png took 1 ms
+marker_found C:\....\data\hi19.png
+[coverage] hull=2368 image=3382 ratio=0.700177 (70%)
+C:\....\data\hi19.png took 1 ms
+marker_found C:\....\data\hi20.png
+[coverage] hull=8496 image=11024 ratio=0.770682 (77%)
+C:\....\data\hi20.png took 1 ms
 
-C:\Users\guyev\Documents\Sodyo assigment\Sodyo assigment\build\Release>
+Summary: passed=18 failed=2 out of 20
+
+C:\....\Release>
